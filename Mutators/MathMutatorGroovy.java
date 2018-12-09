@@ -16,6 +16,7 @@ package org.pitest.mutationtest.engine.gregor.mutators;
 
 import org.objectweb.asm.MethodVisitor;
 import org.pitest.mutationtest.engine.gregor.MethodInfo;
+import org.pitest.mutationtest.engine.MutationIdentifier;
 import org.pitest.mutationtest.engine.gregor.MethodMutatorFactory;
 import org.pitest.mutationtest.engine.gregor.MutationContext;
 import org.objectweb.asm.Opcodes;
@@ -27,11 +28,11 @@ public class MathMutatorGroovy implements MethodMutatorFactory {
     @Override
     public MethodVisitor create(final MutationContext context,
                                 final MethodInfo methodInfo, final MethodVisitor methodVisitor)  {
-        return new MathVisitor(this, context, methodInfo, methodVisitor);
+        return new MathVisitorGroovy(this, context, methodInfo, methodVisitor);
     }
     @Override
     public String toString() {
-        return "MathMutator";
+        return "MathMutatorGroovy";
     }
     
     @Override
@@ -46,25 +47,42 @@ public class MathMutatorGroovy implements MethodMutatorFactory {
     
 }
 
-class MathVisitor extends MethodVisitor {
+class MathVisitorGroovy extends MethodVisitor {
     
-    MathVisitor(final MethodMutatorFactory factory,
-                final MutationContext context, final MethodInfo info, final MethodVisitor delegateMethodVisitor)  {
+    private final MethodMutatorFactory factory;
+    private final MutationContext      context;
+    private final MethodInfo      info;
+    
+    MathVisitorGroovy(final MethodMutatorFactory factory, final MutationContext context, final MethodInfo info, final MethodVisitor delegateMethodVisitor) {
         super(Opcodes.ASM5, delegateMethodVisitor);
-    }
+        this.factory = factory;
+        this.context = context;
+        this.info = info;
+        }
+    
+   private boolean shouldMutate() {
+       if (info.isGeneratedEnumMethod()) {
+            return false;
+        } else {
+            final MutationIdentifier newId = this.context.registerMutation(this.factory, "MathMutatorGroovy");
+            return this.context.shouldMutate(newId);
+        }
+   }
     
     @Override
     public void visitLdcInsn(Object cst) {
-        if (cst.equals("plus")) {
-            super.visitLdcInsn("minus");
-        } else if (cst.equals("minus")) {
-            super.visitLdcInsn("plus");
-        } else if (cst.equals("div")) {
-            super.visitLdcInsn("multiply");
-        } else if (cst.equals("multiply")) {
-            super.visitLdcInsn("div");
+        if (shouldMutate()) {
+            if (cst.equals("plus")) {
+                mv.visitLdcInsn("minus");
+            } else if (cst.equals("minus")) {
+                mv.visitLdcInsn("plus");
+            } else if (cst.equals("div")) {
+                mv.visitLdcInsn("multiply");
+            } else if (cst.equals("multiply")) {
+                mv.visitLdcInsn("div");
+            } else {
+            mv.visitLdcInsn(cst);
+            }
         }
     }
-    
-    
 }
